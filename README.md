@@ -1,7 +1,7 @@
 # Sluice
 
 A Portal-free, hook-enforced, provider-agnostic token saver for Claude
-Code, where the savings measurement ships with the tool.
+Code and Codex CLI, where the savings measurement ships with the tool.
 
 Spotify proved the pattern (shunt bulk reads and boilerplate generation
 to a cheap worker, enforced by hooks, instead of letting the coordinator
@@ -183,6 +183,26 @@ Plugin layout: `plugins/sluice/` holds `.claude-plugin/plugin.json`,
 repo root so it can also run standalone:
 `python3 sluice/bulk_read.py --files a.py --question "..."`.
 
+## Codex CLI (v0.2.0)
+
+Codex has no native Read tool, so there is no Read hook to port:
+a Codex agent reads through the shell or an MCP filesystem tool.
+`adapters/codex/check-codex.py` is one PreToolUse script for that
+surface: unpiped `cat` / `less` / `more` / `Get-Content` / `gc` /
+`type` over the threshold, `head` / `tail` with an explicit `-n`
+over the threshold (Codex-only: the shell IS the read path here),
+and read-shaped / MCP read tools with a path argument and no
+targeted limit. Workers, meter, and skills are unchanged.
+
+Install is manual (no Codex plugin bundle yet): copy the script to
+`~/.codex/hooks/`, merge `adapters/codex/hooks.json` into
+`~/.codex/hooks.json`, copy the two skills into
+`~/.codex/skills/`, and trust the hooks in Codex with `/hooks`.
+Full steps, and the honest gaps (`sed` / `awk` / `python -c`
+reads, server-dependent MCP argument names, hosted tools, and the
+still-owed live authenticated Codex session check), are in
+`adapters/codex/README.md`.
+
 ## Configuration
 
 | Variable | Meaning |
@@ -230,15 +250,17 @@ python3 -m sluice.meter report
 python3 -m sluice.meter record --kind bulk-read --file a.py --avoided-estimate 5000 --worker-tokens 900
 ```
 
-## Out of scope for v1
+## Out of scope
 
-Codex support, subagent routing, editing delegation, reasoning
-delegation, a team server, and any hosted component.
+Subagent routing, editing delegation, reasoning delegation, a team
+server, and any hosted component. (Codex support was out of scope
+for v1 and landed in v0.2.0; Muse Code and Cursor adapters are
+next, in that order unless the host actually used changes it.)
 
 ## Development
 
 ```
-python3 -m unittest discover -s tests        # 16 tests, $0
+python3 -m unittest discover -s tests        # 34 tests, $0
 python3 benchmarks/run_benchmarks.py         # stub benchmark, $0, local mock server
 python3 analysis/phase0_measure.py           # Phase 0, $0, trace-commons corpus
 ```
