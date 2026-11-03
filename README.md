@@ -1,7 +1,7 @@
 # Sluice
 
 A Portal-free, hook-enforced, provider-agnostic token saver for Claude
-Code and Codex CLI, where the savings measurement ships with the tool.
+Code, Codex CLI, and Muse Code, where the savings measurement ships with the tool.
 
 Spotify proved the pattern (shunt bulk reads and boilerplate generation
 to a cheap worker, enforced by hooks, instead of letting the coordinator
@@ -250,17 +250,35 @@ python3 -m sluice.meter report
 python3 -m sluice.meter record --kind bulk-read --file a.py --avoided-estimate 5000 --worker-tokens 900
 ```
 
+## Muse Code (v0.3.0)
+
+Muse Code's tools are lowercase snake_case (`bash`,
+`read_file`), so `adapters/muse/check-muse.py` is one PreToolUse
+script for those two names: shell reads and `head` / `tail -n`
+over the threshold, and unbounded `read_file` calls over the
+threshold; windows and limits <= threshold pass. It ships as a
+native plugin bundle (`adapters/muse/plugin/`, install with
+`muse plugins install … --scope user`, then approve), or as a
+project `.muse/hooks.json` pair. Verified on this VM against
+Muse Code 1.4.14 itself: plugin validation clean, and Muse's
+own offline `muse plugins hook test` harness passes 9/9 cases
+(block big cat / `head -n 1000` / big read; pass small, piped,
+bare head, windowed read, edit). One harness quirk: in 1.4.14
+the fixture's `stdin` must be a JSON object, not a string.
+A live real-model session check is still owed, as for the
+other hosts. Full steps and gaps are in
+`adapters/muse/README.md`.
+
 ## Out of scope
 
 Subagent routing, editing delegation, reasoning delegation, a team
 server, and any hosted component. (Codex support was out of scope
-for v1 and landed in v0.2.0; Muse Code and Cursor adapters are
-next, in that order unless the host actually used changes it.)
+for v1 and landed in v0.2.0; Muse Code landed in v0.3.0.)
 
 ## Development
 
 ```
-python3 -m unittest discover -s tests        # 34 tests, $0
+python3 -m unittest discover -s tests        # 46 tests, $0
 python3 benchmarks/run_benchmarks.py         # stub benchmark, $0, local mock server
 python3 analysis/phase0_measure.py           # Phase 0, $0, trace-commons corpus
 ```

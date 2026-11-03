@@ -1,0 +1,1 @@
+{"hooks":{"PreToolUse":[{"hooks":[{"command":"python3 .muse/hooks/check-muse.py","timeout":10,"type":"command"}],"matcher":"bash"},{"hooks":[{"command":"python3 .muse/hooks/check-muse.py","timeout":10,"type":"command"}],"matcher":"read_file"}]}}
