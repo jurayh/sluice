@@ -1,0 +1,65 @@
+{
+  "worker": "MOCK (local server, $0, NOT a live model)",
+  "tasks": [
+    {
+      "id": "BR1",
+      "files": [
+        "checks_fixture.py"
+      ],
+      "before_tokens_ESTIMATE": 3185,
+      "coordinator_tokens_after_ESTIMATE": 142,
+      "savings_pct": 95.5,
+      "identifier_accuracy_pct": 100.0,
+      "expected": 18,
+      "found": 18
+    },
+    {
+      "id": "BR2",
+      "files": [
+        "model_fixture.py"
+      ],
+      "before_tokens_ESTIMATE": 2721,
+      "coordinator_tokens_after_ESTIMATE": 31,
+      "savings_pct": 98.9,
+      "identifier_accuracy_pct": 100.0,
+      "expected": 4,
+      "found": 4
+    },
+    {
+      "id": "BR3",
+      "files": [
+        "checks_fixture.py",
+        "model_fixture.py"
+      ],
+      "before_tokens_ESTIMATE": 5906,
+      "coordinator_tokens_after_ESTIMATE": 173,
+      "savings_pct": 97.1,
+      "identifier_accuracy_pct": 100.0,
+      "expected": 23,
+      "found": 23
+    },
+    {
+      "id": "CW1",
+      "code_write_tests": "PASS (3/3)",
+      "stdout_contains_code": false,
+      "out": "/tmp/tmph2grtfkd/generated_pair.py"
+    }
+  ],
+  "targeted_flows": {
+    "passed": 7,
+    "total": 7
+  },
+  "hook_overhead": {
+    "small_read_pass": {
+      "p50_ms": 33.2,
+      "p95_ms": 35.6
+    },
+    "large_read_block": {
+      "p50_ms": 33.4,
+      "p95_ms": 37.1
+    }
+  },
+  "mean_bulk_savings_pct_stub": 97.2,
+  "mean_identifier_accuracy_pct_stub": 100.0,
+  "meter_report_stub": "Sluice meter: /tmp/tmph2grtfkd/meter.jsonl (4 records)\nkind | records | coordinator_tokens_MEASURED | coordinator_summary_ESTIMATE | worker_tokens_MEASURED | worker_dollars_MEASURED | avoided_tokens_ESTIMATE\nbulk-read | 3 | 0 | 346 | 14437 | 0.001478 | 11812\ncode-write | 1 | 0 | 45 | 188 | 0.000024 | 56\nCOORDINATOR summary tokens (measured where supplied, else estimate): 391\nWORKER tokens MEASURED: 14625\nAVOIDED tokens (ESTIMATE, never printed alone): 11868\nNOTE: total tokens (worker + coordinator summary) exceed avoided by design; the worker reads the full file. Savings are in coordinator context and, when the worker is cheaper per token, in dollars, not in total token count.\nCOORDINATOR-CONTEXT SAVED (ESTIMATE = avoided - coordinator summary): 11477\nCOORDINATOR-CONTEXT SAVINGS RATIO (ESTIMATE): 0.967\n"
+}

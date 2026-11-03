@@ -1,0 +1,9 @@
+{
+  "name": "sluice",
+  "version": "0.1.1",
+  "description": "Hook-enforced, provider-agnostic token saver for Claude Code: blocks large Reads and shell dumps, shunts them to cheap bulk-read and code-write workers, and meters measured vs estimated savings.",
+  "author": {
+    "name": "Sluice contributors"
+  },
+  "hooks": "./hooks/hooks.json"
+}

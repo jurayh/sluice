@@ -1,0 +1,428 @@
+{
+  "sessions": 28,
+  "totals": {
+    "result_tokens": 1077913,
+    "result_calls": 4262,
+    "read_bulk_tokens_200": 345938,
+    "read_bulk_tokens": 221651,
+    "read_bulk_calls": 39,
+    "read_bulk_tokens_350": 221651,
+    "read_bulk_tokens_500": 174782,
+    "bash_bulk_tokens_200": 15932,
+    "read_bulk_tokens_1000": 10266,
+    "read_calls": 847,
+    "read_targeted": 448,
+    "read_unlimited": 399,
+    "bash_read_cmds": 451,
+    "gen_tokens": 702690,
+    "gen_write_tokens": 579953,
+    "gen_edit_tokens": 122737,
+    "gen_write_calls": 641,
+    "gen_edit_calls": 972,
+    "all_tool_use_payload_est": 1053501
+  },
+  "buckets": {
+    "read_error_or_empty": 37,
+    "read_50_199": 246,
+    "read_1_49": 467,
+    "read_200_349": 52,
+    "read_350_999": 38,
+    "read_1000_plus": 1
+  },
+  "per_session": [
+    [
+      "07b57159-218e-4330-a64e-0ec4b4355056",
+      {
+        "result_tokens": 22916,
+        "result_calls": 178,
+        "gen_tokens": 28407,
+        "read_calls": 19,
+        "read_unlimited": 4,
+        "read_result_tokens": 10184,
+        "read_targeted": 15,
+        "bash_read_cmds": 3,
+        "bash_read_result_tokens": 117
+      }
+    ],
+    [
+      "09d9abe9-0a02-4bd1-8129-3b864695079d",
+      {
+        "result_tokens": 31630,
+        "result_calls": 151,
+        "read_calls": 38,
+        "read_unlimited": 31,
+        "read_result_tokens": 24426,
+        "gen_tokens": 20617,
+        "bash_read_cmds": 1,
+        "bash_read_result_tokens": 66,
+        "read_targeted": 7
+      }
+    ],
+    [
+      "0ca72c0c-ac42-400a-8ca6-cc31a787225f",
+      {
+        "read_calls": 4,
+        "read_unlimited": 1,
+        "result_tokens": 3916,
+        "result_calls": 24,
+        "read_result_tokens": 2211,
+        "gen_tokens": 7809,
+        "read_targeted": 3
+      }
+    ],
+    [
+      "11ef2190-67e2-4707-8212-ab12ebffdbc2",
+      {
+        "result_tokens": 6535,
+        "result_calls": 10,
+        "read_calls": 5,
+        "read_unlimited": 5,
+        "read_result_tokens": 5466,
+        "read_bulk_tokens": 4250,
+        "read_bulk_calls": 1,
+        "bulk_tokens": 4250,
+        "gen_tokens": 24
+      }
+    ],
+    [
+      "17c2cf98-e64a-43c6-932e-fa7efcade358",
+      {
+        "read_calls": 64,
+        "read_unlimited": 33,
+        "result_tokens": 80850,
+        "result_calls": 200,
+        "read_result_tokens": 73059,
+        "read_targeted": 31,
+        "gen_tokens": 48391,
+        "bash_read_cmds": 9,
+        "bash_read_result_tokens": 965,
+        "read_bulk_tokens": 39160,
+        "read_bulk_calls": 7,
+        "bulk_tokens": 39160
+      }
+    ],
+    [
+      "2965219c-42ad-45af-889c-4581ecbe0103",
+      {
+        "read_calls": 8,
+        "read_unlimited": 3,
+        "result_tokens": 22125,
+        "result_calls": 54,
+        "read_result_tokens": 11274,
+        "read_targeted": 5,
+        "bash_read_cmds": 22,
+        "bash_read_result_tokens": 4850,
+        "gen_tokens": 1400
+      }
+    ],
+    [
+      "39082932-131c-40a9-872d-1d3ac8ed1fd6",
+      {
+        "result_tokens": 69686,
+        "result_calls": 377,
+        "gen_tokens": 63793,
+        "read_calls": 49,
+        "read_targeted": 30,
+        "read_result_tokens": 39395,
+        "read_unlimited": 19,
+        "read_bulk_tokens": 20385,
+        "read_bulk_calls": 3,
+        "bulk_tokens": 20385,
+        "bash_read_cmds": 8,
+        "bash_read_result_tokens": 430
+      }
+    ],
+    [
+      "3be5ba0c-62b2-4645-8589-9216be0c10d8",
+      {
+        "read_calls": 44,
+        "read_unlimited": 23,
+        "result_tokens": 116593,
+        "result_calls": 274,
+        "read_result_tokens": 69341,
+        "bash_read_cmds": 109,
+        "bash_read_result_tokens": 34233,
+        "read_bulk_tokens": 27711,
+        "read_bulk_calls": 3,
+        "bulk_tokens": 27711,
+        "gen_tokens": 45108,
+        "read_targeted": 21
+      }
+    ],
+    [
+      "4130c9a7-ee88-443a-91b5-224accd13629",
+      {
+        "result_tokens": 4779,
+        "result_calls": 75,
+        "bash_read_cmds": 9,
+        "bash_read_result_tokens": 1960,
+        "gen_tokens": 39126,
+        "read_calls": 2,
+        "read_targeted": 2,
+        "read_result_tokens": 666
+      }
+    ],
+    [
+      "4222016d-1932-4abb-94b3-463203bd8876",
+      {
+        "read_calls": 93,
+        "read_unlimited": 23,
+        "result_tokens": 97473,
+        "result_calls": 333,
+        "read_result_tokens": 73106,
+        "read_bulk_tokens": 35159,
+        "read_bulk_calls": 8,
+        "bulk_tokens": 35159,
+        "bash_read_cmds": 32,
+        "bash_read_result_tokens": 5001,
+        "gen_tokens": 58307,
+        "read_targeted": 70
+      }
+    ],
+    [
+      "479c5e9f-a299-457f-8459-5948adf8aa8e",
+      {
+        "result_tokens": 36327,
+        "result_calls": 106,
+        "read_calls": 29,
+        "read_unlimited": 20,
+        "read_result_tokens": 21968,
+        "gen_tokens": 30286,
+        "read_targeted": 9,
+        "bash_read_cmds": 1,
+        "bash_read_result_tokens": 61
+      }
+    ],
+    [
+      "47d9fc04-420c-47bb-8ac0-85780af22632",
+      {
+        "result_tokens": 43609,
+        "result_calls": 251,
+        "read_calls": 43,
+        "read_targeted": 19,
+        "read_result_tokens": 25421,
+        "read_unlimited": 24,
+        "gen_tokens": 34559,
+        "bash_read_cmds": 12,
+        "bash_read_result_tokens": 795,
+        "read_bulk_tokens": 12860,
+        "read_bulk_calls": 2,
+        "bulk_tokens": 12860
+      }
+    ],
+    [
+      "4c09dfa9-ff25-4b4c-a2d0-d2fd702c64ee",
+      {}
+    ],
+    [
+      "674e0f5c-c481-4830-b2ef-3e1e069a2b7f",
+      {
+        "result_tokens": 847,
+        "result_calls": 9,
+        "gen_tokens": 1523,
+        "read_calls": 2,
+        "read_targeted": 2,
+        "read_result_tokens": 456
+      }
+    ],
+    [
+      "6a7964ed-6f92-4eee-ae5e-3f91a6445833",
+      {
+        "read_calls": 22,
+        "read_unlimited": 11,
+        "result_tokens": 43656,
+        "result_calls": 164,
+        "read_result_tokens": 17233,
+        "read_targeted": 11,
+        "bash_read_cmds": 12,
+        "bash_read_result_tokens": 1398,
+        "gen_tokens": 35542
+      }
+    ],
+    [
+      "7563bddf-c1a0-4c3e-86ee-062bf288e6d3",
+      {
+        "read_calls": 79,
+        "read_unlimited": 29,
+        "result_tokens": 52472,
+        "result_calls": 239,
+        "read_result_tokens": 36920,
+        "read_bulk_tokens": 13242,
+        "read_bulk_calls": 3,
+        "bulk_tokens": 13242,
+        "gen_tokens": 27276,
+        "read_targeted": 50,
+        "bash_read_cmds": 2,
+        "bash_read_result_tokens": 619
+      }
+    ],
+    [
+      "860618e1-0cf6-43c6-81cf-fe67123082ba",
+      {
+        "read_calls": 44,
+        "read_unlimited": 20,
+        "result_tokens": 49735,
+        "result_calls": 259,
+        "read_result_tokens": 27282,
+        "gen_tokens": 41377,
+        "bash_read_cmds": 4,
+        "bash_read_result_tokens": 2141,
+        "read_targeted": 24,
+        "read_bulk_tokens": 5653,
+        "read_bulk_calls": 1,
+        "bulk_tokens": 5653
+      }
+    ],
+    [
+      "89cf9e13-a4bd-4cf9-9486-7c89737bec1b",
+      {
+        "result_tokens": 13842,
+        "result_calls": 48,
+        "read_calls": 4,
+        "read_unlimited": 3,
+        "read_result_tokens": 3370,
+        "bash_read_cmds": 27,
+        "bash_read_result_tokens": 5934,
+        "gen_tokens": 372,
+        "read_targeted": 1
+      }
+    ],
+    [
+      "92833a43-c30d-4b44-8447-c32ee17d6e6e",
+      {
+        "result_tokens": 20915,
+        "result_calls": 64,
+        "read_calls": 12,
+        "read_unlimited": 9,
+        "read_result_tokens": 14398,
+        "gen_tokens": 12975,
+        "read_targeted": 3,
+        "bash_read_cmds": 9,
+        "bash_read_result_tokens": 2012
+      }
+    ],
+    [
+      "a20a4070-6246-4e9e-adf6-f38b0c1dc3fa",
+      {
+        "read_calls": 50,
+        "read_unlimited": 21,
+        "result_tokens": 100577,
+        "result_calls": 275,
+        "read_result_tokens": 78124,
+        "read_bulk_tokens": 43093,
+        "read_bulk_calls": 7,
+        "bulk_tokens": 43093,
+        "read_targeted": 29,
+        "gen_tokens": 48793,
+        "bash_read_cmds": 9,
+        "bash_read_result_tokens": 839
+      }
+    ],
+    [
+      "ba1b4916-b581-4e05-9a5c-c1d8ffc9b50a",
+      {
+        "gen_tokens": 16373,
+        "result_tokens": 26571,
+        "result_calls": 37,
+        "read_calls": 8,
+        "read_targeted": 3,
+        "read_result_tokens": 20494,
+        "read_unlimited": 5
+      }
+    ],
+    [
+      "c84c0ad3-c368-40df-87b1-5ef9effe237a",
+      {
+        "result_tokens": 16979,
+        "result_calls": 131,
+        "bash_read_cmds": 3,
+        "bash_read_result_tokens": 424,
+        "read_calls": 17,
+        "read_unlimited": 16,
+        "read_result_tokens": 3733,
+        "gen_tokens": 20047,
+        "read_targeted": 1
+      }
+    ],
+    [
+      "c99032e9-377b-4ae9-a9a9-ec7752b059cd",
+      {
+        "read_calls": 89,
+        "read_unlimited": 33,
+        "result_tokens": 78832,
+        "result_calls": 353,
+        "read_result_tokens": 51371,
+        "gen_tokens": 74739,
+        "read_targeted": 56,
+        "read_bulk_tokens": 3987,
+        "read_bulk_calls": 1,
+        "bulk_tokens": 3987
+      }
+    ],
+    [
+      "comparia-voting-fields-anon",
+      {
+        "result_tokens": 3425,
+        "result_calls": 3,
+        "read_calls": 1,
+        "read_unlimited": 1,
+        "read_result_tokens": 1490
+      }
+    ],
+    [
+      "d4c4d47d-642c-4c26-a866-51ab85587896",
+      {
+        "read_calls": 38,
+        "read_unlimited": 3,
+        "result_tokens": 25477,
+        "result_calls": 135,
+        "read_result_tokens": 15454,
+        "read_bulk_tokens": 4858,
+        "read_bulk_calls": 1,
+        "bulk_tokens": 4858,
+        "gen_tokens": 20269,
+        "read_targeted": 35
+      }
+    ],
+    [
+      "da5d32d6-547f-45ae-a5b5-4747ed06542f",
+      {
+        "read_calls": 62,
+        "read_unlimited": 49,
+        "result_tokens": 70252,
+        "result_calls": 447,
+        "read_result_tokens": 15648,
+        "bash_read_cmds": 175,
+        "bash_read_result_tokens": 39132,
+        "gen_tokens": 19623,
+        "read_targeted": 13
+      }
+    ],
+    [
+      "da6566ff-0116-4424-bb59-660623f9eb31",
+      {
+        "result_tokens": 5879,
+        "result_calls": 11,
+        "bash_read_cmds": 2,
+        "bash_read_result_tokens": 4107
+      }
+    ],
+    [
+      "f93127ef-dec9-4d58-964b-ee660964ec4d",
+      {
+        "read_calls": 21,
+        "read_unlimited": 13,
+        "result_tokens": 32015,
+        "result_calls": 54,
+        "read_result_tokens": 30832,
+        "read_bulk_tokens": 11293,
+        "read_bulk_calls": 2,
+        "bulk_tokens": 11293,
+        "gen_tokens": 5954,
+        "read_targeted": 8,
+        "bash_read_cmds": 2,
+        "bash_read_result_tokens": 56
+      }
+    ]
+  ]
+}

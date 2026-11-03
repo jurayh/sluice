@@ -1,0 +1,14 @@
+{
+  "name": "sluice-marketplace",
+  "owner": {
+    "name": "Sluice contributors"
+  },
+  "plugins": [
+    {
+      "name": "sluice",
+      "source": "./plugins/sluice",
+      "description": "Hook-enforced, provider-agnostic token saver for Claude Code, with the savings meter shipped inside.",
+      "version": "0.1.1"
+    }
+  ]
+}
