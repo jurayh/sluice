@@ -146,5 +146,125 @@ class TestCodexRead(unittest.TestCase):
         self.assertEqual(proc.stdout.decode().strip(), "")
 
 
+class TestCodexSed(unittest.TestCase):
+    # Mirrors the June 2026 rollout corpus: sed -n windows are the
+    # bulk-read path (96 of 113 bulk exec outputs); cat never
+    # exceeded 89 lines there. Targeted windows pass, over-threshold
+    # and chained windows block, short files pass by effective size.
+
+    def test_sed_range_over_threshold_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(codex_payload("Bash", {"command": f"sed -n '1,400p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_range_corpus_window_blocked(self):
+        # '430,780p' is a real corpus window: 351 lines on a 900-line file.
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 900)
+            out = run_hook(codex_payload("Bash", {"command": f"sed -n '430,780p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_range_targeted_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            self.assertEqual(run_hook(codex_payload("Bash", {"command": f"sed -n '1,100p' {f}"})), {})
+
+    def test_sed_double_quoted_range_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(codex_payload("Bash", {"command": f'sed -n "1,400p" {f}'}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_e_flag_range_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(codex_payload("Bash", {"command": f"sed -n -e '1,400p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_chained_windows_sum_blocked(self):
+        # Two targeted windows that add up to a bulk read.
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(codex_payload(
+                "Bash", {"command": f"sed -n '1,200p' {f} && sed -n '201,400p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_chained_windows_under_threshold_pass(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 900)
+            self.assertEqual(run_hook(codex_payload(
+                "Bash", {"command": f"sed -n '120,230p' {f} && sed -n '520,620p' {f}"})), {})
+
+    def test_sed_range_beyond_file_passes(self):
+        # 1,1000p on a 100-line file prints 100 lines, not 1000.
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "small.py"; write_lines(f, 100)
+            self.assertEqual(run_hook(codex_payload("Bash", {"command": f"sed -n '1,1000p' {f}"})), {})
+
+    def test_sed_range_tail_of_file_passes(self):
+        # 900,1250p on a 1000-line file prints 101 lines.
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 1000)
+            self.assertEqual(run_hook(codex_payload("Bash", {"command": f"sed -n '900,1250p' {f}"})), {})
+
+    def test_sed_dollar_range_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(codex_payload("Bash", {"command": f"sed -n '100,$p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_dollar_range_small_tail_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 400)
+            self.assertEqual(run_hook(codex_payload("Bash", {"command": f"sed -n '100,$p' {f}"})), {})
+
+    def test_sed_without_n_full_dump_blocked(self):
+        # No -n: sed prints the whole file, like cat.
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(codex_payload("Bash", {"command": f"sed 's/x/y/' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_without_n_small_file_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "small.py"; write_lines(f, 40)
+            self.assertEqual(run_hook(codex_payload("Bash", {"command": f"sed 's/x/y/' {f}"})), {})
+
+    def test_sed_pattern_print_blocked(self):
+        # /pattern/p is unbounded: sized as the whole file.
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(codex_payload("Bash", {"command": f"sed -n '/foo/p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_delete_prints_nothing_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            self.assertEqual(run_hook(codex_payload("Bash", {"command": f"sed -n '1,10d' {f}"})), {})
+
+    def test_sed_missing_file_passes(self):
+        out = run_hook(codex_payload("Bash", {"command": "sed -n '1,400p' /nonexistent/x.py"}))
+        self.assertEqual(out, {})
+
+    def test_sed_piped_from_nl_blocked(self):
+        # Real corpus shape: nl -ba file | sed -n '1,520p'.
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 600)
+            out = run_hook(codex_payload("Bash", {"command": f"nl -ba {f} | sed -n '1,520p'"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_piped_onward_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            self.assertEqual(run_hook(codex_payload("Bash", {"command": f"sed -n '1,520p' {f} | head -20"})), {})
+
+    def test_rg_and_diff_pass(self):
+        # Bulk output that is not a read must not be blocked.
+        self.assertEqual(run_hook(codex_payload("Bash", {"command": "rg --files"})), {})
+        self.assertEqual(run_hook(codex_payload("Bash", {"command": 'rg -n "TODO" .'})), {})
+        self.assertEqual(run_hook(codex_payload("Bash", {"command": "git diff -- app.js"})), {})
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -183,7 +183,7 @@ Plugin layout: `plugins/sluice/` holds `.claude-plugin/plugin.json`,
 repo root so it can also run standalone:
 `python3 sluice/bulk_read.py --files a.py --question "..."`.
 
-## Codex CLI (v0.2.0)
+## Codex CLI (v0.3.1)
 
 Codex has no native Read tool, so there is no Read hook to port:
 a Codex agent reads through the shell or an MCP filesystem tool.
@@ -191,14 +191,17 @@ a Codex agent reads through the shell or an MCP filesystem tool.
 surface: unpiped `cat` / `less` / `more` / `Get-Content` / `gc` /
 `type` over the threshold, `head` / `tail` with an explicit `-n`
 over the threshold (Codex-only: the shell IS the read path here),
-and read-shaped / MCP read tools with a path argument and no
-targeted limit. Workers, meter, and skills are unchanged.
+`sed -n` windows whose sizes sum over the threshold (v0.3.1: the
+rollout analysis showed `sed` windows, not `cat`, are the bulk-read
+path in Codex sessions), and read-shaped / MCP read tools with a
+path argument and no targeted limit. Workers, meter, and skills are
+unchanged.
 
 Install is manual (no Codex plugin bundle yet): copy the script to
 `~/.codex/hooks/`, merge `adapters/codex/hooks.json` into
 `~/.codex/hooks.json`, copy the two skills into
 `~/.codex/skills/`, and trust the hooks in Codex with `/hooks`.
-Full steps, and the honest gaps (`sed` / `awk` / `python -c`
+Full steps, and the honest gaps (`awk` / `python -c`
 reads, server-dependent MCP argument names, hosted tools, and the
 still-owed live authenticated Codex session check), are in
 `adapters/codex/README.md`.

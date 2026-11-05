@@ -13,6 +13,18 @@ surface here is:
   threshold (Codex-only addition: in Codex the shell IS the read path,
   so `head -n 1000 file` is a bulk read, not a curiosity. Bare `head`
   still defaults to 10 lines and passes untouched);
+- `Bash` with `sed -n` windows whose sizes sum over the threshold
+  (Codex-only addition, v0.3.1: the June 2026 rollout corpus showed
+  `sed -n 'A,Bp'` windows, not `cat`, are the bulk-read path in
+  Codex sessions — 96 of 113 bulk exec outputs, while `cat` never
+  exceeded 89 lines. Window sizes are summed per command, so
+  chained targeted windows that add up to a bulk read block too,
+  and each window is capped at the file's actual length, so a
+  `1,1000p` window on a 100-line file passes. A `sed` without
+  `-n` prints the whole file, so it is treated like `cat`; a
+  `/pattern/p` print is unbounded, so it is sized as the whole
+  file. Targeted windows (<= threshold) pass untouched, as does
+  `sed` whose output is piped onward);
 - a read-shaped tool (`Read`, `read_file`, or an MCP tool whose name
   contains "read") with a path argument and no targeted limit, when
   the file(s) total over the threshold.
@@ -39,7 +51,9 @@ against the payload's `cwd` when present, else the process cwd
 (Codex runs command hooks with the session cwd).
 
 Not covered, stated here, not buried (see adapters/codex/README.md):
-- `sed -n`, `awk`, and `python -c open(...)` reads through the shell;
+- `awk` and `python -c open(...)` reads through the shell (no bulk
+  cases in the June 2026 rollout corpus: 0 bulk awk/python reads,
+  against 96 bulk `sed` windows);
 - MCP read tools whose argument names are not path / file_path /
   paths (server-dependent, so the adapter only blocks what it can
   identify);
@@ -164,11 +178,200 @@ def head_tail_count(tokens: list[str]) -> int | None:
     return None
 
 
+def sed_scripts_and_files(tokens: list[str]) -> tuple[list[str], list[str]]:
+    """(scripts, data files) from one sed invocation's tokens.
+
+    Scripts arrive as `-e` / `--expression` arguments or as the bare
+    first non-flag argument. `-f` / `--file` names a script file, not
+    data, so it and its value are skipped. Everything else non-flag
+    after the script is a data file.
+    """
+    scripts, files = [], []
+    i = 1
+    while i < len(tokens):
+        tok = tokens[i]
+        if tok in ("-e", "--expression"):
+            if i + 1 < len(tokens):
+                scripts.append(tokens[i + 1])
+            i += 2
+            continue
+        if tok.startswith("--expression="):
+            scripts.append(tok.split("=", 1)[1])
+            i += 1
+            continue
+        if tok in ("-f", "--file"):
+            i += 2
+            continue
+        if tok.startswith("--file="):
+            i += 1
+            continue
+        if tok.startswith("-") and tok != "-":
+            i += 1
+            continue
+        if not scripts:
+            scripts.append(tok)
+        else:
+            files.append(tok)
+        i += 1
+    return scripts, files
+
+
+def sed_quiet(tokens: list[str]) -> bool:
+    """True when -n / --quiet / --silent (or a combined -n flag) is set."""
+    for tok in tokens[1:]:
+        if tok in ("-n", "--quiet", "--silent"):
+            return True
+        if tok.startswith("-") and not tok.startswith("--") and "n" in tok[1:]:
+            return True
+    return False
+
+
+_RANGE_RE = re.compile(r"(\d+)\s*,\s*(\d+)\s*p\b")
+_RANGE_DOLLAR_RE = re.compile(r"(\d+)\s*,\s*\$\s*p\b")
+_SINGLE_RE = re.compile(r"(?<![\d,])(\d+)\s*p\b")
+_PATTERN_RE = re.compile(r"/(?:[^/\\]|\\.)*/\s*p\b")
+_SUBST_P_RE = re.compile(r"s/(?:[^/\\]|\\.)*/(?:[^/\\]|\\.)*/[a-z]*p\b")
+_BARE_P_RE = re.compile(r"(^|[;{}])\s*p\s*($|[;{}])")
+
+
+def sed_script_lines(script: str, file_lines: list[int], per_file: bool) -> int:
+    """Lines one sed script prints, given the input files' line counts.
+
+    `per_file` is True when sed reads its own file operands (ranges
+    reset per file, so each window is capped at each file's length
+    and summed); False when sed reads stdin (one stream, so the
+    window is capped once at the total stream length). Returns 0
+    for a script that prints nothing (e.g. `sed -n '1,10d'`).
+    """
+    stream = sum(file_lines)
+
+    def window(a: int, b: int) -> int:
+        if per_file:
+            return sum(max(0, min(b, fl) - a + 1) for fl in file_lines)
+        return max(0, min(b, stream) - a + 1)
+
+    def single(a: int) -> int:
+        if per_file:
+            return sum(1 for fl in file_lines if a <= fl)
+        return 1 if a <= stream else 0
+
+    def whole_file() -> int:
+        return stream  # per-file and stream agree: every line, once
+
+    total = 0
+    rest = script
+    for m in _RANGE_DOLLAR_RE.finditer(rest):
+        total += window(int(m.group(1)), stream)
+    rest = _RANGE_DOLLAR_RE.sub("", rest)
+    for m in _RANGE_RE.finditer(rest):
+        total += window(int(m.group(1)), int(m.group(2)))
+    rest = _RANGE_RE.sub("", rest)
+    for m in _SINGLE_RE.finditer(rest):
+        total += single(int(m.group(1)))
+    rest = _SINGLE_RE.sub("", rest)
+    if _PATTERN_RE.search(rest) or _SUBST_P_RE.search(rest):
+        total += whole_file()
+        rest = _PATTERN_RE.sub("", rest)
+        rest = _SUBST_P_RE.sub("", rest)
+    if _BARE_P_RE.search(rest):
+        total += whole_file()
+    return total
+
+
+def sed_effective_lines(scripts: list[str], files: list[str], cwd: str,
+                        quiet: bool, per_file: bool) -> int | None:
+    """Lines a sed invocation prints, or None if it cannot be sized.
+
+    Without -n, sed prints the whole input (transformed), so the
+    size is the files' total lines regardless of script. With -n,
+    only `p` commands print, sized per script above. No sizable
+    file (missing files, or no operand at all) means None: the
+    caller passes rather than blocking on a guess.
+    """
+    file_lines = []
+    for path in files:
+        lines = count_lines(path, cwd)
+        if lines is not None:
+            file_lines.append(lines)
+    if not file_lines:
+        return None
+    if not quiet:
+        return sum(file_lines)
+    return sum(sed_script_lines(s, file_lines, per_file) for s in scripts)
+
+
+def check_sed(command: str, cwd: str) -> None:
+    """Block a sed read whose printed lines sum over the threshold.
+
+    Works at pipe-part level: a command is split into segments, each
+    segment into `|`-separated parts. A sed part whose output is
+    piped onward (e.g. `sed ... | head -20`) passes, matching the
+    piped-read rule elsewhere. A sed part reading stdin (e.g.
+    `nl -ba file | sed -n '1,520p'`) is sized against the file
+    operands found elsewhere in the command, as one stream.
+    Window sizes sum across all sed parts in the command, so
+    chained targeted windows that add up to a bulk read block.
+    """
+    if not isinstance(command, str) or not command:
+        return
+    parts: list[tuple[list[str], bool]] = []  # (tokens, has_later_part)
+    for segment in split_segments(command):
+        tokens = tokens_of(segment)
+        current: list[str] = []
+        segment_parts: list[list[str]] = []
+        for tok in tokens:
+            if tok == "|":
+                segment_parts.append(current)
+                current = []
+            else:
+                current.append(tok)
+        segment_parts.append(current)
+        for idx, part in enumerate(segment_parts):
+            if part:
+                parts.append((part, idx < len(segment_parts) - 1))
+    total = 0
+    sized = False
+    for tokens, piped_onward in parts:
+        if not tokens or os.path.basename(tokens[0]).lower() != "sed":
+            continue
+        if piped_onward:
+            continue
+        scripts, own_files = sed_scripts_and_files(tokens)
+        quiet = sed_quiet(tokens)
+        if own_files:
+            effective = sed_effective_lines(
+                scripts, own_files, cwd, quiet, per_file=True)
+        else:
+            upstream: list[str] = []
+            for other, _ in parts:
+                if other is tokens:
+                    continue
+                upstream.extend(
+                    t for t in other[1:]
+                    if not t.startswith("-") and t != "|")
+            effective = sed_effective_lines(
+                scripts, upstream, cwd, quiet, per_file=False)
+        if effective is None:
+            continue
+        sized = True
+        total += effective
+    if sized and total > threshold():
+        block(
+            f"Blocked by Sluice: sed window(s) totalling {total} lines, "
+            f"over the {threshold()}-line threshold (SLUICE_MIN_LINES). "
+            "Do not dump the file(s) through the shell. Use the "
+            "bulk-read skill instead, and use only its structured "
+            "bullets to continue. Targeted sed windows (<= threshold) "
+            "and piped output still pass."
+        )
+
+
 def check_bash(command, cwd: str) -> None:
     if isinstance(command, list):
         command = shlex.join(str(c) for c in command)
     if not isinstance(command, str) or not command:
         return
+    check_sed(command, cwd)
     for segment in split_segments(command):
         if "|" in segment:
             continue  # piped: targeted, passes through

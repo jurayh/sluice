@@ -1,0 +1,151 @@
+{
+  "corpus": {
+    "files": 53,
+    "function_calls": 3035,
+    "function_call_outputs": 3035,
+    "apply_patch_calls": 1033
+  },
+  "exec": {
+    "calls": 2487,
+    "total_recorded_tokens": 1668420,
+    "total_body_tokens_est": 1433905,
+    "bulk_350_calls": 113,
+    "bulk_350_share_calls_pct": 4.5,
+    "bulk_350_recorded_tokens": 598461,
+    "bulk_350_share_tokens_pct": 35.9,
+    "would_block_calls": 0,
+    "would_block_recorded_tokens": 0,
+    "would_block_share_of_bulk_tokens_pct": 0.0,
+    "gap_bulk_calls": 96,
+    "gap_bulk_recorded_tokens": 260048,
+    "other_bulk_calls": 17,
+    "other_bulk_recorded_tokens": 338413,
+    "truncated_bulk_calls": 5,
+    "strict_read_total_calls": 11,
+    "head_tail_n_total_calls": 0,
+    "gap_read_total_calls": 644,
+    "bulk_verb_top": [
+      [
+        "sed",
+        96
+      ],
+      [
+        "rg",
+        6
+      ],
+      [
+        "nl",
+        6
+      ],
+      [
+        "yarn",
+        3
+      ],
+      [
+        "git",
+        1
+      ],
+      [
+        "/home/codex/.foundry/bin/forge",
+        1
+      ]
+    ]
+  },
+  "threshold_sensitivity": {
+    "200": {
+      "bulk_calls": 375,
+      "bulk_share_calls_pct": 15.1,
+      "bulk_recorded_tokens": 1155175,
+      "bulk_share_tokens_pct": 69.2
+    },
+    "350": {
+      "bulk_calls": 113,
+      "bulk_share_calls_pct": 4.5,
+      "bulk_recorded_tokens": 598461,
+      "bulk_share_tokens_pct": 35.9
+    },
+    "500": {
+      "bulk_calls": 32,
+      "bulk_share_calls_pct": 1.3,
+      "bulk_recorded_tokens": 330352,
+      "bulk_share_tokens_pct": 19.8
+    },
+    "1000": {
+      "bulk_calls": 1,
+      "bulk_share_calls_pct": 0.0,
+      "bulk_recorded_tokens": 10510,
+      "bulk_share_tokens_pct": 0.6
+    }
+  },
+  "other_tools": {
+    "calls": 496,
+    "output_tokens_est": 6405,
+    "view_image_calls": 195,
+    "view_image_output_chars": 89482954,
+    "by_name": [
+      [
+        "update_plan",
+        293
+      ],
+      [
+        "view_image",
+        195
+      ],
+      [
+        "query_docs",
+        5
+      ],
+      [
+        "resolve_library_id",
+        3
+      ]
+    ]
+  },
+  "write_stdin_excluded": {
+    "calls": 52,
+    "total_lines": 723,
+    "total_recorded_tokens": 7960
+  },
+  "apply_patch_generated": {
+    "calls": 1033,
+    "input_tokens_est": 972535,
+    "output_tokens_est": 28748
+  },
+  "per_session": {
+    "sessions": 52,
+    "sessions_with_bulk_exec": 40,
+    "sessions_with_would_block": 0,
+    "top_by_bulk_tokens": [
+      {
+        "file": "rollout-2026-06-23T05-19-47-019ef2eb-9b6b-7403-867f-d60931d57bea.jsonl",
+        "exec_bulk_calls": 4,
+        "exec_bulk_recorded_tokens": 148064,
+        "would_block_calls": 0
+      },
+      {
+        "file": "rollout-2026-06-24T05-06-56-019ef806-3354-74e2-97ef-8fc0af42f4f2.jsonl",
+        "exec_bulk_calls": 4,
+        "exec_bulk_recorded_tokens": 79285,
+        "would_block_calls": 0
+      },
+      {
+        "file": "rollout-2026-07-07T16-39-04-019f3d72-8860-75d2-af4b-808480d1bd65.jsonl",
+        "exec_bulk_calls": 4,
+        "exec_bulk_recorded_tokens": 46094,
+        "would_block_calls": 0
+      },
+      {
+        "file": "rollout-2026-07-08T14-06-20-019f420d-1304-7461-8017-cc970f244716.jsonl",
+        "exec_bulk_calls": 5,
+        "exec_bulk_recorded_tokens": 40846,
+        "would_block_calls": 0
+      },
+      {
+        "file": "rollout-2026-07-07T16-38-48-019f3d72-4c81-78e2-9bf7-e236053caf3f.jsonl",
+        "exec_bulk_calls": 8,
+        "exec_bulk_recorded_tokens": 22159,
+        "would_block_calls": 0
+      }
+    ]
+  }
+}

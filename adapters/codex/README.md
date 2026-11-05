@@ -23,6 +23,17 @@ them.
   Codex-only: in Codex the shell IS the read path, so
   `head -n 1000 file` is a bulk read, and the Claude Code hook's
   "head alone passes" rule would leave it open.
+- `Bash`: `sed -n` windows whose sizes sum over the threshold
+  (v0.3.1, built from the June 2026 rollout analysis: `sed -n`
+  windows are the bulk-read path in Codex sessions — 96 of 113
+  bulk exec outputs, plus 6 more through `nl | sed`, while `cat`
+  never exceeded 89 lines). Each window is capped at the file's
+  actual length, so `1,1000p` on a 100-line file passes; chained
+  windows sum per command, so targeted windows that add up to a
+  bulk read block. `sed` without `-n` prints the whole file and
+  is treated like `cat`; a `/pattern/p` print is unbounded and
+  is sized as the whole file. Targeted windows pass, as does
+  `sed` whose output is piped onward.
 - Read-shaped tools (`Read`, `read_file`, `read_text_file`) and MCP
   tools whose name contains `read` (`mcp__filesystem__read_text_file`,
   and so on): a path / file_path / paths argument with no targeted
@@ -73,12 +84,15 @@ works the same after a Codex session.
 
 ## Verified, and what is not
 
-- Adapter logic: 17 tests in `tests/test_codex_hook.py`
-  (34 total with the Claude Code suite), feeding the adapter
+- Adapter logic: 36 tests in `tests/test_codex_hook.py`
+  (65 total with the Claude Code and Muse Code suites), feeding the adapter
   Codex-shaped payloads from the official hooks docs: Bash string
   and list commands, relative paths resolved against `cwd`,
-  `head -n` large and small, MCP single and multi-file reads,
-  targeted limits, unidentified reads, `apply_patch` passing.
+  `head -n` large and small, `sed -n` windows (targeted pass,
+  over-threshold and chained windows block, short-file and
+  piped `nl | sed` cases, `rg` / `git diff` passing), MCP single
+  and multi-file reads, targeted limits, unidentified reads,
+  `apply_patch` passing.
 - Hook file: `hooks.json` parses, and Codex 0.164.0 accepts the
   `~/.codex/hooks.json` location (verified by `codex doctor`
   against a test `CODEX_HOME`; doctor does not itself validate
@@ -100,9 +114,10 @@ works the same after a Codex session.
 Codex's docs call hooks a useful guardrail, not a complete
 enforcement boundary, and this adapter inherits that:
 
-- `sed -n`, `awk`, and `python -c open(...)` reads through the
-  shell are not parsed. They are the next gap to close if real
-  Codex sessions show them as the bulk-read path.
+- `awk` and `python -c open(...)` reads through the shell are
+  not parsed. No bulk cases in the June 2026 rollout corpus
+  (0 bulk awk/python reads, against 102 bulk `sed` windows),
+  so they stay a stated gap rather than a built rule.
 - MCP read tools with argument names other than path / file_path /
   paths are not identified, and MCP tool names and arguments are
   server-dependent, so the MCP rule is best-effort.
