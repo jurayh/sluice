@@ -64,6 +64,9 @@ reads, and are counted as other.
 
 Output: codex_rollout_results.json next to this script, plus a
 human report written separately (CODEX_ROLLOUT_REPORT.md).
+The results also carry the Nov 9 additions: sed-rule threshold
+sensitivity (adapter's own window math), the first-token verb
+breakdown, and the per-session bulk-share histogram.
 """
 from __future__ import annotations
 
@@ -177,6 +180,94 @@ def line_count(text: str) -> int:
     if not text:
         return 0
     return text.count("\n") + (0 if text.endswith("\n") else 1)
+
+
+def sed_rule_sensitivity(exec_rows: list[dict]) -> dict:
+    """Blocked calls/tokens per threshold under the shipped sed rule.
+
+    Uses the adapter's own window math (adapters/codex/check-codex.py)
+    with each window capped at an effectively-infinite file length,
+    because the rollout files are not on disk: this is the explicit
+    range-size sum, the same approximation as the Nov 4 simulation.
+    Non-quiet sed (full dump) has no cases in this corpus, so it
+    contributes nothing here; the shipped rule sizes those by file.
+    Only -n windowed calls are counted; a call counts once even
+    when several sed parts sum over the threshold.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "check_codex",
+        os.path.join(os.path.dirname(__file__),
+                     "..", "adapters", "codex", "check-codex.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    big = [10 ** 9]
+    # Per call: summed explicit window size (uncapped), recorded
+    # tokens, and recorded body lines.
+    call_windows: list[tuple[int, int, int]] = []
+    window_sizes: list[int] = []
+    for row in exec_rows:
+        total = 0
+        sized = False
+        for segment in mod.split_segments(row["cmd"]):
+            tokens = mod.tokens_of(segment)
+            parts, cur = [], []
+            for tok in tokens:
+                if tok == "|":
+                    parts.append(cur)
+                    cur = []
+                else:
+                    cur.append(tok)
+            parts.append(cur)
+            for idx, part in enumerate(parts):
+                if not part or os.path.basename(part[0]).lower() != "sed":
+                    continue
+                if idx < len(parts) - 1:
+                    continue  # piped onward: passes
+                scripts, _files = mod.sed_scripts_and_files(part)
+                if not mod.sed_quiet(part):
+                    continue
+                for s in scripts:
+                    for a, b in mod._RANGE_RE.findall(s):
+                        window_sizes.append(int(b) - int(a) + 1)
+                    for a in mod._RANGE_DOLLAR_RE.findall(s):
+                        window_sizes.append(10 ** 9)  # to end of file: unbounded here
+                    for a in mod._SINGLE_RE.findall(s):
+                        window_sizes.append(1)
+                total += sum(
+                    mod.sed_script_lines(s, big, per_file=True)
+                    for s in scripts)
+                sized = True
+        if sized:
+            call_windows.append(
+                (total, row["recorded_tokens"] or 0, row["body_lines"]))
+    out: dict = {
+        "windows_total": len(window_sizes),
+        "windows_over_350": sum(1 for w in window_sizes if 350 < w < 10 ** 9),
+        "windows_unbounded_dollar": sum(1 for w in window_sizes if w >= 10 ** 9),
+        "by_threshold": {},
+    }
+    for thr in THRESHOLDS:
+        # (a) output-confirmed: window sum over threshold AND the
+        # recorded body is itself bulk at that threshold (lower bound;
+        # at 350 this reproduces the Nov 4 simulation's 102 calls).
+        # (b) window-only: window sum over threshold regardless of
+        # body (upper bound; overcounts windows that run past the
+        # end of a short file, which the shipped rule caps).
+        # The truth with real files lies between, closer to (a):
+        # in this corpus windows match file sizes closely.
+        blocked_b = [(t, tok) for t, tok, _ in call_windows if t > thr]
+        blocked_a = [(t, tok) for t, tok, lines in call_windows
+                     if t > thr and lines >= thr]
+        out["by_threshold"][str(thr)] = {
+            "blocked_calls_output_confirmed": len(blocked_a),
+            "blocked_recorded_tokens_output_confirmed": sum(
+                tok for _, tok in blocked_a),
+            "blocked_calls_window_only": len(blocked_b),
+            "blocked_recorded_tokens_window_only": sum(
+                tok for _, tok in blocked_b),
+        }
+    return out
 
 
 def main() -> None:
@@ -340,6 +431,36 @@ def main() -> None:
                              if s["exec_bulk_calls"] > 0)
     sessions_with_would_block = sum(1 for s in per_session.values()
                                     if s["would_block_calls"] > 0)
+    # Per-session bulk-share histogram (bulk recorded tokens as a
+    # share of that session's exec recorded tokens).
+    hist = Counter({"0%": 0, "1-10%": 0, "11-25%": 0, "26-50%": 0, ">50%": 0})
+    for s in per_session.values():
+        tot = s["exec_recorded_tokens"]
+        share = (s["exec_bulk_recorded_tokens"] / tot) if tot else 0
+        if share == 0:
+            hist["0%"] += 1
+        elif share <= 0.10:
+            hist["1-10%"] += 1
+        elif share <= 0.25:
+            hist["11-25%"] += 1
+        elif share <= 0.50:
+            hist["26-50%"] += 1
+        else:
+            hist[">50%"] += 1
+    # First-token verb breakdown for exec calls.
+    verb_stats: dict[str, dict] = defaultdict(
+        lambda: {"calls": 0, "bulk_calls": 0, "bulk_recorded_tokens": 0})
+    for r in exec_rows:
+        verb = r["cmd"].split()[0] if r["cmd"].split() else ""
+        v = verb_stats[verb]
+        v["calls"] += 1
+        if r["body_lines"] >= 350:
+            v["bulk_calls"] += 1
+            v["bulk_recorded_tokens"] += r["recorded_tokens"] or 0
+    verb_breakdown = sorted(
+        ((verb, s["calls"], s["bulk_calls"], s["bulk_recorded_tokens"])
+         for verb, s in verb_stats.items()),
+        key=lambda t: -t[3])
     top_sessions = sorted(
         per_session.items(),
         key=lambda kv: kv[1]["exec_bulk_recorded_tokens"],
@@ -387,6 +508,9 @@ def main() -> None:
             "bulk_verb_top": verb_bulk.most_common(12),
         },
         "threshold_sensitivity": sensitivity,
+        "sed_rule_sensitivity": sed_rule_sensitivity(exec_rows),
+        "verb_breakdown": verb_breakdown,
+        "per_session_bulk_share_histogram": dict(hist),
         "other_tools": {
             "calls": len(other_rows),
             # view_image outputs are base64 PNG bytes, not text: their

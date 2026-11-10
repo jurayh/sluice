@@ -143,6 +143,119 @@ over 350; none need `$`/pattern sizing. With file capping
 length) that count can only stay flat or drop slightly for
 short files.
 
+## Appendix: additions, Nov 9
+
+Added after the v0.3.1 build, all computed from the same corpus
+with the same script (`codex_rollout_measure.py`, re-run Nov 9;
+the new figures live in `codex_rollout_results.json` under
+`sed_rule_sensitivity`, `verb_breakdown`, and
+`per_session_bulk_share_histogram`). No new data was fetched.
+
+### Claude Code vs Codex, side by side
+
+Phase 0 numbers are from `analysis/phase0_results.json`
+(trace-commons, 28 sessions). Token figures differ by design
+and are labelled, not pooled: Claude Code tokens are chars/4
+estimates; Codex tokens are the header's recorded counts.
+
+| | Claude Code (Phase 0) | Codex rollouts |
+| --- | --- | --- |
+| Sessions | 28 | 53 (52 with exec calls) |
+| Tool-result payload | 1,077,913 est. tokens, 4,262 results | 1,668,420 recorded tokens, 2,487 exec calls |
+| Bulk share | 20.6% (39 bulk Reads, 221,651 tokens) | 35.9% (113 bulk exec outputs, 598,461 tokens) |
+| Dominant bulk-read verb | `Read` (native tool) | `sed -n` windows |
+| Bulk the shipped adapter blocked | 0 calls (cat bulk was 0) | 0 calls before v0.3.1; 102 calls / 288,248 tokens after |
+| Generated payload (separate) | Write + Edit 702,690 est. tokens | apply_patch input ~972,535 est. tokens |
+| MCP filesystem reads in corpus | n/a (native Read exists) | 0 (only context7 doc lookups) |
+
+The contrast is the point: on Claude Code the bulk read is a
+first-class tool call; on Codex it is a shell idiom, and the
+idiom is `sed -n` windows, not `cat`. An adapter ported
+verbatim from the Claude hooks would have guarded the wrong
+verb on this host.
+
+### Sed-rule threshold sensitivity
+
+Blocked calls / recorded tokens under the v0.3.1 rule, per
+threshold, computed with the adapter's own window math and
+uncapped file lengths (same approximation as the Nov 4
+simulation). Two counts are given: output-confirmed (window
+sum over threshold AND the recorded body is bulk at that
+threshold — the lower bound) and window-only (window sum
+alone — the upper bound; it overcounts windows that run past
+the end of a short file, which the shipped rule caps). The
+truth with real files lies between, closer to confirmed.
+
+| Threshold | Confirmed calls | Confirmed tokens | Window-only calls | Window-only tokens |
+| --- | --- | --- | --- | --- |
+| 200 lines | 348 | 774,341 | 475 | 880,276 |
+| **350 lines** | **102** | **288,248** | **127** | **331,779** |
+| 500 lines | 23 | 82,240 | 26 | 92,087 |
+| 1000 lines | 0 | 0 | 0 | 0 |
+
+350 sits on a steep part of the curve: dropping to 200 would
+nearly triple blocked calls (348 vs 102) and catch 46% of all
+exec tokens, while raising to 500 cuts coverage to 23 calls.
+The 102-vs-127 gap at 350 is the file-capping effect: 25 calls
+have windows summing over 350 whose recorded bodies stayed
+under it. Windows parsed: 748, of which 119 over 350 and 0
+unbounded (`$` ranges: none in this corpus). Non-quiet `sed`
+(full-dump form): 0 calls in the corpus, so that branch of
+the rule is untested here.
+
+### Per-session bulk-share histogram
+
+Bulk exec recorded tokens as a share of each session's exec
+recorded tokens (bulk *output* share, not read share — the
+top sessions are dominated by `rg` listings, see below).
+
+| Bulk share of session exec tokens | Sessions |
+| --- | --- |
+| 0% | 12 |
+| 1–10% | 4 |
+| 11–25% | 13 |
+| 26–50% | 14 |
+| Over 50% | 9 |
+
+Bulk is broad-based, not one bad session: 36 of 52 sessions
+have over 10% bulk exec share, and 9 are over half. That is
+why the verdict is about the adapter's verb coverage, not
+about a single workload: the bulk is everywhere, the reads
+are `sed`.
+
+### Bulk output by first verb
+
+| Verb | Calls | Bulk calls | Bulk recorded tokens |
+| --- | --- | --- | --- |
+| `rg` | 223 | 6 | 278,457 |
+| `sed` | 640 | 96 | 260,048 |
+| `nl` | 54 | 6 | 28,200 (all piped into `sed`) |
+| `yarn` | 60 | 3 | 17,103 |
+| `git` | 134 | 1 | 10,510 |
+| `forge` | 19 | 1 | 4,143 |
+| everything else (52 verbs) | — | 0 | 0 |
+
+The three bulk-token leaders tell the story in one line:
+`rg` listings are the biggest bulk output and must not be
+blocked, `sed` is the biggest bulk *read* and is now blocked,
+and the busiest verbs overall (`node`, 426 calls; `npm`, 215;
+`curl`, 110) produce zero bulk output. Total reconciles:
+278,457 + 260,048 + 28,200 + 17,103 + 10,510 + 4,143 =
+598,461, the headline bulk figure.
+
+### One gap found while reconciling counts
+
+The raw-text count of `sed -n 'A,Bp'` windows is 749; the
+adapter's parser counts 748. The missing one is
+`find cache -maxdepth 2 -type f -print -exec sed -n '1,80p' {} \;`
+— `sed` nested behind `find -exec` is not parsed by the
+adapter (nor by the measurement script's adapter-faithful
+pass). It is an 80-line targeted window, so it changes no
+blocked count. It is recorded here as a candidate for a
+later adapter change, not built now: `find -exec` and `xargs`
+nesting would need their own parser, and the corpus gives
+it exactly one targeted case to test against.
+
 ## Limits
 
 - June 2026, CLI 0.141.0, headless stacked-task rollouts:
