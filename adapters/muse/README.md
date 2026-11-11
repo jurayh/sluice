@@ -34,6 +34,18 @@ tool names and plugin format differ.
   `SLUICE_MIN_LINES`), and `head` / `tail` with an explicit `-n`
   over the threshold. Bare `head`, piped reads, and targeted
   counts pass.
+- `bash`: `sed -n` windows whose sizes sum over the threshold
+  (v0.3.2, ported verbatim from the Codex adapter: the June 2026
+  Codex rollout corpus showed `sed -n` windows are the bulk-read
+  path in shell-first agents — 102 of 113 bulk exec outputs
+  would block under the rule, while `cat` never exceeded 89
+  lines. Each window is capped at the file's actual length,
+  chained windows sum per command, `sed` without `-n` is a full
+  dump, `/pattern/p` is sized as the whole file, targeted windows
+  and piped-onward output pass). The corpus evidence is
+  Codex-only: no Muse session data proves `sed` is the Muse
+  read path, so this port rests on shared shell-first behaviour,
+  not on a measured Muse finding.
 - `read_file`: a path argument with no targeted window/limit,
   when the file totals over the threshold. A window or limit <=
   threshold passes. Edits (`edit_file` / `write_file`) pass:
@@ -81,11 +93,14 @@ README. The meter is host-agnostic.
 - Plugin validation: `muse plugins validate` — zero
   diagnostics, hook recognised (PreToolUse, 10,000 ms timeout).
 - Muse's own offline hook harness, `muse plugins hook test`,
-  $0, no model, no auth, 9/9 cases as expected:
+  $0, no model, no auth, 15/15 cases as expected:
   block: bash cat of a 500-line file, `head -n 1000` of it,
-  `read_file` of it; pass: small cat, piped cat, bare `head`,
-  small read, a 50-line `read_file` window, and an edit of the
-  large file.
+  `read_file` of it, a `sed -n '1,400p'` window on it, chained
+  `sed` windows summing over the threshold, and `nl | sed` on
+  it; pass: small cat, piped cat, bare `head`, small read, a
+  50-line `read_file` window, a targeted `sed` window, a
+  `sed` window past the end of a short file, `rg --files`, and
+  an edit of the large file.
 - Hook-test fixture quirk found and documented: in 1.4.14 the
   fixture's `stdin` must be a JSON **object**, not a string.
   A string fixture is re-encoded and reaches the script as a
@@ -94,7 +109,7 @@ README. The meter is host-agnostic.
   until a dump hook showed what the harness actually feeds
   the script. Fixtures used here live outside the repo
   (test-home fixtures), because they name local test files.
-- Unit tests: 12 in `tests/test_muse_hook.py` (46 total with
+- Unit tests: 31 in `tests/test_muse_hook.py` (84 total with
   the Claude Code and Codex suites).
 - **Not yet verified: a hook firing in a live Muse Code
   session with a real model.** The echo provider never calls
@@ -106,8 +121,10 @@ README. The meter is host-agnostic.
 
 ## Not covered
 
-- `sed -n`, `awk`, and `python -c open(...)` reads through the
-  shell are not parsed.
+- `awk` and `python -c open(...)` reads through the shell are
+  not parsed (no bulk cases in the June 2026 Codex rollout
+  corpus: 0 bulk awk/python reads, against 102 bulk `sed`
+  windows).
 - `read_file` calls whose parameter names fall outside the
   accepted set pass rather than blocking on a guess.
 - Hosted / web tools never reach PreToolUse.

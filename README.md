@@ -204,7 +204,10 @@ Install is manual (no Codex plugin bundle yet): copy the script to
 Full steps, and the honest gaps (`awk` / `python -c`
 reads, server-dependent MCP argument names, hosted tools, and the
 still-owed live authenticated Codex session check), are in
-`adapters/codex/README.md`.
+`adapters/codex/README.md`. The measurement behind the `sed`
+rule is in `analysis/CODEX_ROLLOUT_REPORT.md` (53 Codex
+rollouts: the shipped adapter blocked 0 of 113 bulk exec
+outputs until the `sed` rule, which would block 102).
 
 ## Configuration
 
@@ -253,20 +256,27 @@ python3 -m sluice.meter report
 python3 -m sluice.meter record --kind bulk-read --file a.py --avoided-estimate 5000 --worker-tokens 900
 ```
 
-## Muse Code (v0.3.0)
+## Muse Code (v0.3.2)
 
 Muse Code's tools are lowercase snake_case (`bash`,
 `read_file`), so `adapters/muse/check-muse.py` is one PreToolUse
 script for those two names: shell reads and `head` / `tail -n`
-over the threshold, and unbounded `read_file` calls over the
-threshold; windows and limits <= threshold pass. It ships as a
+over the threshold, `sed -n` windows whose sizes sum over the
+threshold (v0.3.2, ported verbatim from the Codex adapter — the
+Codex rollout corpus showed `sed` windows, not `cat`, are the
+bulk-read path in shell-first agents; no Muse session data
+proves it for Muse, stated as such in `adapters/muse/README.md`),
+and unbounded `read_file` calls over the threshold; windows and
+limits <= threshold pass. It ships as a
 native plugin bundle (`adapters/muse/plugin/`, install with
 `muse plugins install … --scope user`, then approve), or as a
 project `.muse/hooks.json` pair. Verified on this VM against
 Muse Code 1.4.14 itself: plugin validation clean, and Muse's
-own offline `muse plugins hook test` harness passes 9/9 cases
-(block big cat / `head -n 1000` / big read; pass small, piped,
-bare head, windowed read, edit). One harness quirk: in 1.4.14
+own offline `muse plugins hook test` harness passes 15/15 cases
+(block big cat / `head -n 1000` / big read / big `sed` window /
+chained `sed` windows / piped `nl | sed`; pass small, piped,
+bare head, windowed read, targeted `sed`, short-file `sed`,
+`rg`, edit). One harness quirk: in 1.4.14
 the fixture's `stdin` must be a JSON object, not a string.
 A live real-model session check is still owed, as for the
 other hosts. Full steps and gaps are in

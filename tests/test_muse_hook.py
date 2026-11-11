@@ -121,5 +121,119 @@ class TestMuseReadFile(unittest.TestCase):
             self.assertEqual(out, {})
 
 
+class TestMuseSed(unittest.TestCase):
+    # Same rule as the Codex adapter (v0.3.1), ported verbatim:
+    # sed -n window sizes sum per command, each capped at the
+    # file's actual length. Payloads are Muse-shaped: lowercase
+    # `bash`, tool_input.command. Deny carries a non-empty reason,
+    # which Muse requires; assert it on the block cases.
+
+    def test_sed_range_over_threshold_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(muse_payload("bash", {"command": f"sed -n '1,400p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+            self.assertTrue(out["hookSpecificOutput"]["permissionDecisionReason"])
+
+    def test_sed_range_corpus_window_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 900)
+            out = run_hook(muse_payload("bash", {"command": f"sed -n '430,780p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_range_targeted_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            self.assertEqual(run_hook(muse_payload("bash", {"command": f"sed -n '1,100p' {f}"})), {})
+
+    def test_sed_double_quoted_range_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(muse_payload("bash", {"command": f'sed -n "1,400p" {f}'}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_e_flag_range_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(muse_payload("bash", {"command": f"sed -n -e '1,400p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_chained_windows_sum_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(muse_payload(
+                "bash", {"command": f"sed -n '1,200p' {f} && sed -n '201,400p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_chained_windows_under_threshold_pass(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 900)
+            self.assertEqual(run_hook(muse_payload(
+                "bash", {"command": f"sed -n '120,230p' {f} && sed -n '520,620p' {f}"})), {})
+
+    def test_sed_range_beyond_file_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "small.py"; write_lines(f, 100)
+            self.assertEqual(run_hook(muse_payload("bash", {"command": f"sed -n '1,1000p' {f}"})), {})
+
+    def test_sed_range_tail_of_file_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 1000)
+            self.assertEqual(run_hook(muse_payload("bash", {"command": f"sed -n '900,1250p' {f}"})), {})
+
+    def test_sed_dollar_range_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(muse_payload("bash", {"command": f"sed -n '100,$p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_dollar_range_small_tail_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 400)
+            self.assertEqual(run_hook(muse_payload("bash", {"command": f"sed -n '100,$p' {f}"})), {})
+
+    def test_sed_without_n_full_dump_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(muse_payload("bash", {"command": f"sed 's/x/y/' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_without_n_small_file_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "small.py"; write_lines(f, 40)
+            self.assertEqual(run_hook(muse_payload("bash", {"command": f"sed 's/x/y/' {f}"})), {})
+
+    def test_sed_pattern_print_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            out = run_hook(muse_payload("bash", {"command": f"sed -n '/foo/p' {f}"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_delete_prints_nothing_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            self.assertEqual(run_hook(muse_payload("bash", {"command": f"sed -n '1,10d' {f}"})), {})
+
+    def test_sed_missing_file_passes(self):
+        out = run_hook(muse_payload("bash", {"command": "sed -n '1,400p' /nonexistent/x.py"}))
+        self.assertEqual(out, {})
+
+    def test_sed_piped_from_nl_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 600)
+            out = run_hook(muse_payload("bash", {"command": f"nl -ba {f} | sed -n '1,520p'"}))
+            self.assertEqual(out.get("decision"), "block")
+
+    def test_sed_piped_onward_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "large.py"; write_lines(f, 500)
+            self.assertEqual(run_hook(muse_payload("bash", {"command": f"sed -n '1,520p' {f} | head -20"})), {})
+
+    def test_rg_and_diff_pass(self):
+        self.assertEqual(run_hook(muse_payload("bash", {"command": "rg --files"})), {})
+        self.assertEqual(run_hook(muse_payload("bash", {"command": 'rg -n "TODO" .'})), {})
+        self.assertEqual(run_hook(muse_payload("bash", {"command": "git diff -- app.js"})), {})
+
+
 if __name__ == "__main__":
     unittest.main()
