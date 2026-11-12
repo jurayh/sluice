@@ -279,7 +279,13 @@ bare head, windowed read, targeted `sed`, short-file `sed`,
 `rg`, edit). One harness quirk: in 1.4.14
 the fixture's `stdin` must be a JSON object, not a string.
 A live real-model session check is still owed, as for the
-other hosts. Full steps and gaps are in
+other hosts. What is verified since Nov 11, 2026: a scripted
+stub-model session (Muse Code 1.4.15, $0, no real model) in
+which the hook fires inside a real session loop — a 500-line
+`read_file` is denied with the bulk-read redirect and no file
+content leaks into the session, while a 40-line read passes
+and executes. Details and the SSE-shape notes are in
+`analysis/MUSE_STUB_SESSION_REPORT.md`. Full steps and gaps are in
 `adapters/muse/README.md`.
 
 ## Out of scope
@@ -291,7 +297,7 @@ for v1 and landed in v0.2.0; Muse Code landed in v0.3.0.)
 ## Development
 
 ```
-python3 -m unittest discover -s tests        # 46 tests, $0
+python3 -m unittest discover -s tests        # 84 tests, $0
 python3 benchmarks/run_benchmarks.py         # stub benchmark, $0, local mock server
 python3 analysis/phase0_measure.py           # Phase 0, $0, trace-commons corpus
 ```
