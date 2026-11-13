@@ -37,13 +37,14 @@ was supposed to execute.
 
 ## How the stub works
 
-`~/workspace/muse-test-home/stub/stub_server.py` (not in the repo; a
-test harness, not a deliverable) serves the model catalog and a
-scripted Responses API stream on 127.0.0.1:8765. Scenario is read
-fresh from `scenario.txt` on every request: `big`, `small`, `text`,
-`created-only`, `replay`, `replay-mut`, `replay-completed`,
-`replay-msg`, `replay-msg-min`. Every request body is saved raw to
-`requests/raw-NNN.json`. Run command:
+`adapters/muse/stub/stub_server.py` (moved into the repo Nov 12,
+2026; originally built under `~/workspace/muse-test-home/stub/`)
+serves the model catalog and a scripted Responses API stream on
+127.0.0.1:8765. Scenario is read fresh from `scenario.txt` on
+every request: `big`, `small`, `text`, `created-only`, `replay`,
+`replay-mut`, `replay-completed`, `replay-msg`, `replay-msg-min`.
+Every request body is saved raw to `requests/raw-NNN.json`. Run
+command:
 
 ```
 META_API_KEY=dummy-stub-key muse exec --provider meta \

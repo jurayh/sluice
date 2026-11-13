@@ -118,6 +118,13 @@ README. The meter is host-agnostic.
   under the standing rule. That check — a large read actually
   blocked in a real session, summary usable, meter showing the
   session — is owed. Do not claim it until that run happens.
+  What *is* verified since Nov 11, 2026: a scripted stub-model
+  session (Muse Code 1.4.15, $0, no real model) in which the
+  hook fires inside a real session loop — a 500-line read is
+  denied with the bulk-read redirect and no content leaks,
+  while a 40-line read passes and executes. The harness lives
+  in `stub/` beside this file; the write-up is in
+  `../../analysis/MUSE_STUB_SESSION_REPORT.md`.
 
 ## Not covered
 
