@@ -1,5 +1,7 @@
 # Sluice
 
+[![Tests](https://github.com/jurayh/sluice/actions/workflows/test.yml/badge.svg)](https://github.com/jurayh/sluice/actions/workflows/test.yml)
+
 A Portal-free, hook-enforced, provider-agnostic token saver for Claude
 Code, Codex CLI, and Muse Code, where the savings measurement ships with the tool.
 
