@@ -5,6 +5,7 @@ All notable changes to Sluice will be documented in this file.
 ## [Unreleased]
 
 - CI: GitHub Actions workflow runs the 84-test unit suite on Python 3.11 and 3.12 on every push and pull request; first run green on both.
+- CI: also runs the stub benchmark ($0, local mock) and guards against Muse hook-script and version drift.
 - Muse Code adapter: stub-model session harness moved to `adapters/muse/stub/`; re-verified in place, all pass.
 - Docs: Muse stub-model session report (Nov 11) — a $0 scripted session in which the hook fires inside a real session loop.
 - Tooling: remote-tree verify script kept in `analysis/`.
